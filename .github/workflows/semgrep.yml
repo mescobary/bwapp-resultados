@@ -1,0 +1,18 @@
+name: semgrep-sast
+on: [push, pull_request, workflow_dispatch]
+
+permissions:
+  contents: read
+  security-events: write
+
+jobs:
+  semgrep:
+    runs-on: ubuntu-latest
+    container: semgrep/semgrep
+    steps:
+      - uses: actions/checkout@v4
+      - run: semgrep scan --config semgrep/php-sast-rules.yml --metrics=off --sarif -o semgrep.sarif bWAPP/app || true
+      - uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: semgrep.sarif
+          category: semgrep-bwapp
