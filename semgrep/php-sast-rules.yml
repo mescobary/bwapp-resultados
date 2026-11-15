@@ -1,0 +1,274 @@
+rules:
+  # ───────────────────────── A03:2021 – Injection ─────────────────────────
+  - id: php-sql-injection
+    languages: [php]
+    severity: ERROR
+    mode: taint
+    message: >-
+      Posible inyección SQL (CWE-89): entrada controlada por el usuario llega a
+      una consulta SQL construida por concatenación. Use consultas preparadas
+      (mysqli prepared statements / PDO con parámetros).
+    metadata:
+      owasp: "A03:2021 - Injection"
+      cwe: "CWE-89"
+      category: "SQL Injection"
+    pattern-sources:
+      - pattern: $_GET
+      - pattern: $_POST
+      - pattern: $_REQUEST
+      - pattern: $_COOKIE
+      - pattern: $_SERVER
+    pattern-sinks:
+      - pattern: mysql_query(...)
+      - pattern: mysqli_query(...)
+      - pattern: $O->query(...)
+      - pattern: $O->real_query(...)
+      - pattern: $O->multi_query(...)
+      - pattern: pg_query(...)
+
+  - id: php-command-injection
+    languages: [php]
+    severity: ERROR
+    mode: taint
+    message: >-
+      Posible inyección de comandos de SO (CWE-78): entrada del usuario alcanza
+      una función de ejecución de comandos. Evite ejecutar comandos con datos
+      externos; use APIs nativas o escape estricto (escapeshellarg).
+    metadata:
+      owasp: "A03:2021 - Injection"
+      cwe: "CWE-78"
+      category: "Command Injection"
+    pattern-sources:
+      - pattern: $_GET
+      - pattern: $_POST
+      - pattern: $_REQUEST
+      - pattern: $_COOKIE
+      - pattern: $_SERVER
+    pattern-sinks:
+      - pattern: system(...)
+      - pattern: exec(...)
+      - pattern: passthru(...)
+      - pattern: shell_exec(...)
+      - pattern: popen(...)
+      - pattern: proc_open(...)
+
+  - id: php-code-injection-eval
+    languages: [php]
+    severity: ERROR
+    message: >-
+      Ejecución dinámica de código (CWE-95): eval/assert/create_function ejecutan
+      cadenas como código. Si la cadena incluye datos externos permite RCE.
+    metadata:
+      owasp: "A03:2021 - Injection"
+      cwe: "CWE-95"
+      category: "Code Injection"
+    patterns:
+      - pattern-either:
+          - pattern: eval(...)
+          - pattern: assert(...)
+          - pattern: create_function(...)
+
+  - id: php-xss-reflected
+    languages: [php]
+    severity: WARNING
+    mode: taint
+    message: >-
+      Posible XSS reflejado (CWE-79): entrada del usuario se envía a la salida
+      HTML sin codificar. Codifique con htmlspecialchars()/htmlentities().
+    metadata:
+      owasp: "A03:2021 - Injection"
+      cwe: "CWE-79"
+      category: "Cross-Site Scripting"
+    pattern-sources:
+      - pattern: $_GET
+      - pattern: $_POST
+      - pattern: $_REQUEST
+      - pattern: $_COOKIE
+      - pattern: $_SERVER
+    pattern-sinks:
+      - pattern: echo $SINK
+      - pattern: print $SINK
+    pattern-sanitizers:
+      - pattern: htmlspecialchars(...)
+      - pattern: htmlentities(...)
+
+  - id: php-ldap-injection
+    languages: [php]
+    severity: ERROR
+    mode: taint
+    message: >-
+      Posible inyección LDAP (CWE-90): entrada del usuario llega a un filtro LDAP
+      sin escapar. Use ldap_escape() sobre los valores del filtro.
+    metadata:
+      owasp: "A03:2021 - Injection"
+      cwe: "CWE-90"
+      category: "LDAP Injection"
+    pattern-sources:
+      - pattern: $_GET
+      - pattern: $_POST
+      - pattern: $_REQUEST
+      - pattern: $_COOKIE
+    pattern-sinks:
+      - pattern: ldap_search(...)
+      - pattern: ldap_list(...)
+      - pattern: ldap_read(...)
+
+  - id: php-mail-header-injection
+    languages: [php]
+    severity: WARNING
+    mode: taint
+    message: >-
+      Posible inyección en correo (CWE-93): entrada del usuario llega a mail()
+      sin validar, permitiendo inyectar cabeceras o destinatarios.
+    metadata:
+      owasp: "A03:2021 - Injection"
+      cwe: "CWE-93"
+      category: "Mail Injection"
+    pattern-sources:
+      - pattern: $_GET
+      - pattern: $_POST
+      - pattern: $_REQUEST
+    pattern-sinks:
+      - pattern: mail(...)
+
+  - id: php-dynamic-file-inclusion
+    languages: [php]
+    severity: ERROR
+    mode: taint
+    message: >-
+      Inclusión de archivos controlada por el usuario (CWE-98, LFI/RFI): permite
+      ejecutar código local o remoto. Nunca incluya rutas derivadas de la entrada.
+    metadata:
+      owasp: "A03:2021 - Injection"
+      cwe: "CWE-98"
+      category: "File Inclusion"
+    pattern-sources:
+      - pattern: $_GET
+      - pattern: $_POST
+      - pattern: $_REQUEST
+      - pattern: $_COOKIE
+    pattern-sinks:
+      - pattern: include $SINK
+      - pattern: include_once $SINK
+      - pattern: require $SINK
+      - pattern: require_once $SINK
+
+  - id: php-dangerous-extract
+    languages: [php]
+    severity: WARNING
+    message: >-
+      extract() sobre datos del usuario (CWE-915): puede sobrescribir variables
+      arbitrarias del ámbito y alterar la lógica de la aplicación.
+    metadata:
+      owasp: "A03:2021 - Injection"
+      cwe: "CWE-915"
+      category: "Variable Tampering"
+    patterns:
+      - pattern-either:
+          - pattern: extract($_GET)
+          - pattern: extract($_POST)
+          - pattern: extract($_REQUEST)
+          - pattern: extract($_COOKIE)
+
+  # ───────────── A01:2021 – Broken Access Control / Redirect ──────────────
+  - id: php-open-redirect
+    languages: [php]
+    severity: WARNING
+    mode: taint
+    message: >-
+      Redirección abierta (CWE-601): el destino de la redirección proviene de la
+      entrada del usuario. Valide contra una lista blanca de destinos.
+    metadata:
+      owasp: "A01:2021 - Broken Access Control"
+      cwe: "CWE-601"
+      category: "Open Redirect"
+    pattern-sources:
+      - pattern: $_GET
+      - pattern: $_POST
+      - pattern: $_REQUEST
+    pattern-sinks:
+      - pattern: header(...)
+
+  # ──────────── A02:2021 – Cryptographic Failures ─────────────────────────
+  - id: php-weak-hash
+    languages: [php]
+    severity: WARNING
+    message: >-
+      Hash criptográficamente débil (CWE-328): MD5/SHA1 no son adecuados para
+      contraseñas ni integridad. Use password_hash() (bcrypt/argon2) o SHA-256+.
+    metadata:
+      owasp: "A02:2021 - Cryptographic Failures"
+      cwe: "CWE-328"
+      category: "Weak Hash"
+    patterns:
+      - pattern-either:
+          - pattern: md5(...)
+          - pattern: sha1(...)
+
+  - id: php-weak-crypto-mcrypt
+    languages: [php]
+    severity: WARNING
+    message: >-
+      Cifrado obsoleto/débil (CWE-327): mcrypt está deprecado y DES/ECB son
+      inseguros. Use OpenSSL/sodium con AES-GCM.
+    metadata:
+      owasp: "A02:2021 - Cryptographic Failures"
+      cwe: "CWE-327"
+      category: "Weak Crypto"
+    patterns:
+      - pattern-either:
+          - pattern: mcrypt_encrypt(...)
+          - pattern: mcrypt_decrypt(...)
+          - pattern: base64_encode(...)
+
+  # ──────────── A08:2021 – Software and Data Integrity ────────────────────
+  - id: php-insecure-deserialization
+    languages: [php]
+    severity: ERROR
+    mode: taint
+    message: >-
+      Deserialización insegura (CWE-502): unserialize() sobre datos del usuario
+      puede derivar en inyección de objetos y RCE. Use JSON o firme los datos.
+    metadata:
+      owasp: "A08:2021 - Software and Data Integrity Failures"
+      cwe: "CWE-502"
+      category: "Insecure Deserialization"
+    pattern-sources:
+      - pattern: $_GET
+      - pattern: $_POST
+      - pattern: $_REQUEST
+      - pattern: $_COOKIE
+    pattern-sinks:
+      - pattern: unserialize(...)
+
+  # ──────────── A05:2021 – Security Misconfiguration ──────────────────────
+  - id: php-information-disclosure-phpinfo
+    languages: [php]
+    severity: INFO
+    message: >-
+      Divulgación de información (CWE-200): phpinfo() expone configuración
+      sensible del servidor. No debe quedar accesible en producción.
+    metadata:
+      owasp: "A05:2021 - Security Misconfiguration"
+      cwe: "CWE-200"
+      category: "Information Disclosure"
+    patterns:
+      - pattern: phpinfo(...)
+
+  # ──────────── A07:2021 – Identification and Authentication ──────────────
+  - id: php-hardcoded-credentials
+    languages: [php]
+    severity: WARNING
+    message: >-
+      Credenciales embebidas en el código (CWE-798): las contraseñas no deben
+      estar en el código fuente. Use variables de entorno o un gestor de secretos.
+    metadata:
+      owasp: "A07:2021 - Identification and Authentication Failures"
+      cwe: "CWE-798"
+      category: "Hardcoded Credentials"
+    patterns:
+      - pattern-either:
+          - pattern: $password = "...";
+          - pattern: $pass = "...";
+          - pattern: $db_password = "...";
+          - pattern: define("...PASSWORD...", "...");
